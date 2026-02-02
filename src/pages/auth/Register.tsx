@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,8 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import api from '@/services/api';
-import type { UserRole, Bank } from '@/types';
+import { INSURANCE_COMPANIES } from '@/constants/insuranceCompanies';
+import type { UserRole } from '@/types';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -35,7 +35,6 @@ export default function Register() {
   const [selectedRole, setSelectedRole] = useState<UserRole>(defaultRole);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [banks, setBanks] = useState<Bank[]>([]);
   const { register: authRegister } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -51,17 +50,6 @@ export default function Register() {
       bankId: undefined,
     },
   });
-
-  useEffect(() => {
-    // Load banks for agent registration
-    if (selectedRole === 'agent') {
-      api.getBanks().then((response) => {
-        if (response.success && response.data) {
-          setBanks(response.data);
-        }
-      });
-    }
-  }, [selectedRole]);
 
   const onSubmit = async (data: RegisterFormData) => {
     if (selectedRole === 'agent' && !data.bankId) {
@@ -206,23 +194,20 @@ export default function Register() {
                   name="bankId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Select Bank</FormLabel>
+                      <FormLabel>Select Insurance Company</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="input-focus">
                             <div className="flex items-center gap-2">
                               <Building2 className="h-4 w-4 text-muted-foreground" />
-                              <SelectValue placeholder="Choose your bank" />
+                              <SelectValue placeholder="Choose your insurance company" />
                             </div>
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {banks.map((bank) => (
-                            <SelectItem key={bank.id} value={bank.id}>
-                              <div className="flex items-center gap-2">
-                                <img src={bank.logo} alt={bank.name} className="h-5 w-5 object-contain" />
-                                {bank.name}
-                              </div>
+                        <SelectContent className="max-h-60">
+                          {INSURANCE_COMPANIES.map((company) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
