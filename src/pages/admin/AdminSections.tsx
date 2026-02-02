@@ -3,7 +3,6 @@ import {
   Plus, 
   Pencil, 
   Trash2, 
-  Search, 
   FileText, 
   ChevronRight,
   GripVertical,
@@ -17,7 +16,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -42,10 +40,10 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/services/api';
-import type { Bank, Section, Question, QuestionType } from '@/types';
+import { INSURANCE_COMPANIES } from '@/constants/insuranceCompanies';
+import type { Section, Question, QuestionType } from '@/types';
 
 const questionTypes: { value: QuestionType; label: string }[] = [
   { value: 'text', label: 'Short Text' },
@@ -60,12 +58,10 @@ const questionTypes: { value: QuestionType; label: string }[] = [
 ];
 
 export default function AdminSections() {
-  const [banks, setBanks] = useState<Bank[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
-  const [selectedBankId, setSelectedBankId] = useState<string>('');
+  const [selectedBankId, setSelectedBankId] = useState<string>(INSURANCE_COMPANIES[0].id);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   
   // Section dialog
   const [isSectionDialogOpen, setIsSectionDialogOpen] = useState(false);
@@ -94,32 +90,13 @@ export default function AdminSections() {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadBanks();
-  }, []);
-
-  useEffect(() => {
     if (selectedBankId) {
       loadSections(selectedBankId);
     }
   }, [selectedBankId]);
 
-  const loadBanks = async () => {
-    try {
-      const response = await api.getBanks();
-      if (response.success && response.data) {
-        setBanks(response.data);
-        if (response.data.length > 0) {
-          setSelectedBankId(response.data[0].id);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading banks:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const loadSections = async (bankId: string) => {
+    setIsLoading(true);
     try {
       const response = await api.getSections(bankId);
       if (response.success && response.data) {
@@ -130,6 +107,8 @@ export default function AdminSections() {
       }
     } catch (error) {
       console.error('Error loading sections:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -294,7 +273,7 @@ export default function AdminSections() {
     });
   };
 
-  const selectedBank = banks.find((b) => b.id === selectedBankId);
+  const selectedCompany = INSURANCE_COMPANIES.find((c) => c.id === selectedBankId);
 
   return (
     <div className="p-6 space-y-6">
@@ -302,24 +281,24 @@ export default function AdminSections() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Sections & Questions</h1>
-          <p className="text-muted-foreground">Create and manage form sections for each bank</p>
+          <p className="text-muted-foreground">Create and manage form sections for each insurance company</p>
         </div>
       </div>
 
-      {/* Bank Selector */}
+      {/* Insurance Company Selector */}
       <div className="flex items-center gap-4">
-        <Label>Select Bank:</Label>
-        <Select value={selectedBankId} onValueChange={setSelectedBankId}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Choose a bank" />
+        <Label>Select Insurance Company:</Label>
+        <Select value={selectedBankId} onValueChange={(value) => {
+          setSelectedBankId(value);
+          setSelectedSection(null);
+        }}>
+          <SelectTrigger className="w-80">
+            <SelectValue placeholder="Choose an insurance company" />
           </SelectTrigger>
-          <SelectContent>
-            {banks.map((bank) => (
-              <SelectItem key={bank.id} value={bank.id}>
-                <div className="flex items-center gap-2">
-                  <img src={bank.logo} alt={bank.name} className="h-5 w-5 rounded object-cover" />
-                  {bank.name}
-                </div>
+          <SelectContent className="max-h-60">
+            {INSURANCE_COMPANIES.map((company) => (
+              <SelectItem key={company.id} value={company.id}>
+                {company.name}
               </SelectItem>
             ))}
           </SelectContent>

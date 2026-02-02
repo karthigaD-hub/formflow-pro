@@ -34,13 +34,13 @@ CREATE TABLE user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   role app_role NOT NULL,
-  bank_id UUID, -- For agents: which bank they belong to
+  bank_id VARCHAR(50), -- For agents: which insurance company they belong to
   UNIQUE(user_id, role)
 );
 
--- Banks table (insurance companies/banks)
+-- Banks table (insurance companies)
 CREATE TABLE banks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id VARCHAR(50) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   logo TEXT DEFAULT '',
   description TEXT DEFAULT '',
@@ -52,10 +52,10 @@ CREATE TABLE banks (
 ALTER TABLE user_roles ADD CONSTRAINT fk_user_roles_bank 
   FOREIGN KEY (bank_id) REFERENCES banks(id) ON DELETE SET NULL;
 
--- Sections table (form sections for each bank)
+-- Sections table (form sections for each insurance company)
 CREATE TABLE sections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+  bank_id VARCHAR(50) REFERENCES banks(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   description TEXT DEFAULT '',
   "order" INT DEFAULT 0,
@@ -81,7 +81,7 @@ CREATE TABLE form_responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   section_id UUID REFERENCES sections(id) ON DELETE CASCADE,
-  bank_id UUID REFERENCES banks(id) ON DELETE SET NULL,
+  bank_id VARCHAR(50) REFERENCES banks(id) ON DELETE SET NULL,
   responses JSONB NOT NULL DEFAULT '[]', -- [{"questionId": "uuid", "value": "answer"}]
   is_submitted BOOLEAN DEFAULT false,
   submitted_at TIMESTAMP,
@@ -133,15 +133,27 @@ VALUES (
 INSERT INTO user_roles (user_id, role)
 VALUES ('a0000000-0000-0000-0000-000000000001', 'admin');
 
--- Insert sample bank
-INSERT INTO banks (id, name, logo, description, is_active)
-VALUES (
-  'b0000000-0000-0000-0000-000000000001',
-  'HDFC Bank',
-  'https://upload.wikimedia.org/wikipedia/commons/2/28/HDFC_Bank_Logo.svg',
-  'HDFC Bank Insurance Services - Life, Health, Motor and more',
-  true
-);
+-- Insert all insurance companies
+INSERT INTO banks (id, name, logo, description, is_active) VALUES 
+  ('lic', 'Life Insurance Corporation of India (LIC)', 'https://upload.wikimedia.org/wikipedia/commons/5/55/LIC_of_India.svg', 'India''s largest life insurance company', true),
+  ('hdfc-life', 'HDFC Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/2/28/HDFC_Bank_Logo.svg', 'HDFC Life Insurance Services', true),
+  ('icici-prudential', 'ICICI Prudential Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/1/12/ICICI_Bank_Logo.svg', 'ICICI Prudential Life Insurance', true),
+  ('sbi-life', 'SBI Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/c/cc/SBI-logo.svg', 'SBI Life Insurance Company', true),
+  ('max-life', 'Max Life Insurance', 'https://upload.wikimedia.org/wikipedia/en/6/64/Max_Life_Insurance_logo.svg', 'Max Life Insurance Company', true),
+  ('bajaj-allianz', 'Bajaj Allianz Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/2/20/Bajaj_Allianz_logo.png', 'Bajaj Allianz Life Insurance', true),
+  ('kotak-mahindra', 'Kotak Mahindra Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/9/98/Kotak_Mahindra_Bank_logo.svg', 'Kotak Mahindra Life Insurance', true),
+  ('aditya-birla', 'Aditya Birla Sun Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/4/47/Aditya_Birla_Group_Logo.svg', 'Aditya Birla Sun Life Insurance', true),
+  ('tata-aia', 'Tata AIA Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/8/8e/Tata_logo.svg', 'Tata AIA Life Insurance', true),
+  ('pnb-metlife', 'PNB MetLife Insurance', 'https://upload.wikimedia.org/wikipedia/commons/7/7f/PNB_new_logo.png', 'PNB MetLife Insurance', true),
+  ('canara-hsbc', 'Canara HSBC Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/a/a7/Canara_Bank_Logo.svg', 'Canara HSBC Life Insurance', true),
+  ('reliance-nippon', 'Reliance Nippon Life Insurance', 'https://upload.wikimedia.org/wikipedia/en/8/8e/Reliance_Industries_Logo.svg', 'Reliance Nippon Life Insurance', true),
+  ('exide-life', 'Exide Life Insurance', 'https://upload.wikimedia.org/wikipedia/en/3/3e/Exide_Industries_logo.png', 'Exide Life Insurance', true),
+  ('indiafirst-life', 'IndiaFirst Life Insurance', 'https://upload.wikimedia.org/wikipedia/en/2/21/Bank_of_Baroda_logo.svg', 'IndiaFirst Life Insurance', true),
+  ('aegon-life', 'Aegon Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Aegon_N.V._Logo.svg', 'Aegon Life Insurance', true),
+  ('edelweiss-tokio', 'Edelweiss Tokio Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/c/c2/Edelweiss_Financial_Services_logo.svg', 'Edelweiss Tokio Life Insurance', true),
+  ('aviva-life', 'Aviva Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Aviva_Logo.svg', 'Aviva Life Insurance', true),
+  ('shriram-life', 'Shriram Life Insurance', 'https://upload.wikimedia.org/wikipedia/en/3/33/Shriram_Transport_Finance_Company_logo.svg', 'Shriram Life Insurance', true),
+  ('pramerica-life', 'Pramerica Life Insurance', 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Prudential_plc_logo.svg', 'Pramerica Life Insurance', true);
 
 -- Insert sample agent (password: agent123)
 INSERT INTO users (id, name, email, phone, password_hash)
@@ -154,13 +166,13 @@ VALUES (
 );
 
 INSERT INTO user_roles (user_id, role, bank_id)
-VALUES ('a0000000-0000-0000-0000-000000000002', 'agent', 'b0000000-0000-0000-0000-000000000001');
+VALUES ('a0000000-0000-0000-0000-000000000002', 'agent', 'hdfc-life');
 
 -- Insert sample section
 INSERT INTO sections (id, bank_id, title, description, "order", is_active)
 VALUES (
   's0000000-0000-0000-0000-000000000001',
-  'b0000000-0000-0000-0000-000000000001',
+  'hdfc-life',
   'Personal Information',
   'Basic personal details required for insurance application',
   1,
