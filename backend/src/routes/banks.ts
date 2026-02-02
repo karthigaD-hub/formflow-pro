@@ -61,15 +61,21 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
 // Create bank (admin only)
 router.post('/', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
   try {
-    const { name, logo, description, isActive = true } = req.body;
+    const { id, name, logo, description, isActive = true } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ success: false, message: 'Bank name is required' });
+    if (!id || !name) {
+      return res.status(400).json({ success: false, message: 'Bank ID and name are required' });
+    }
+
+    // Check if bank ID already exists
+    const existing = await query('SELECT id FROM banks WHERE id = $1', [id]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, message: 'Bank ID already exists' });
     }
 
     const result = await query(
-      'INSERT INTO banks (name, logo, description, is_active) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, logo || '', description || '', isActive]
+      'INSERT INTO banks (id, name, logo, description, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [id, name, logo || '', description || '', isActive]
     );
 
     const bank = result.rows[0];

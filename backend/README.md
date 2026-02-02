@@ -41,8 +41,11 @@ FRONTEND_URL=http://localhost:5173
 # Create database
 psql -U postgres -c "CREATE DATABASE xcyber;"
 
-# Run schema (includes seed data)
+# Run schema (includes insurance companies and sample data)
 psql -U postgres -d xcyber -f database/schema.sql
+
+# Optional: Seed test users with proper password hashes
+npx ts-node database/seed-users.ts
 ```
 
 ### 4. Start Server
@@ -57,6 +60,8 @@ npm start
 ```
 
 Server runs on: `http://localhost:3001`
+API Base: `http://localhost:3001/api`
+Health Check: `http://localhost:3001/api/health`
 
 ---
 
@@ -160,12 +165,14 @@ curl -X POST http://localhost:3001/api/auth/login \
 
 ## 👥 Test Credentials
 
-After running the schema, these accounts are available:
+After running the schema and seed-users script:
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@xcyber.com | admin123 |
-| Agent | agent@xcyber.com | agent123 |
+| Admin | admin@xcyber.com | Admin@123 |
+| Agent | agent@xcyber.com | Agent@123 (HDFC Life) |
+
+**Note:** Register new users through the application for proper security.
 
 ---
 

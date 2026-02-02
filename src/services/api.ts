@@ -13,6 +13,8 @@ import type {
 } from '@/types';
 
 // Configure your backend URL here
+// For development: http://localhost:3001/api
+// The backend must be running on this URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 class ApiService {
@@ -32,18 +34,31 @@ class ApiService {
       ...options.headers,
     };
 
+    const url = `${API_BASE_URL}${endpoint}`;
+
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch(url, {
         ...options,
         headers,
       });
+
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        if (!response.ok) {
+          return {
+            success: false,
+            error: `Server error: ${response.status} ${response.statusText}`,
+          };
+        }
+      }
 
       const data = await response.json();
 
       if (!response.ok) {
         return {
           success: false,
-          error: data.message || 'An error occurred',
+          error: data.message || `Request failed with status ${response.status}`,
         };
       }
 
@@ -52,6 +67,16 @@ class ApiService {
         data: data.data || data,
       };
     } catch (error) {
+      console.error(`API Error [${endpoint}]:`, error);
+      
+      // More specific error messages
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        return {
+          success: false,
+          error: 'Cannot connect to server. Make sure the backend is running on ' + API_BASE_URL,
+        };
+      }
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',
