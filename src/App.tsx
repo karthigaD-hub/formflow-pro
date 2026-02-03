@@ -20,6 +20,7 @@ import AdminBanks from "./pages/admin/AdminBanks";
 import AdminSections from "./pages/admin/AdminSections";
 import AdminResponses from "./pages/admin/AdminResponses";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminBulkUpload from "./pages/admin/AdminBulkUpload";
 
 // Agent
 import AgentLayout from "./pages/agent/AgentLayout";
@@ -60,6 +61,7 @@ const App = () => (
               <Route index element={<AdminDashboard />} />
               <Route path="banks" element={<AdminBanks />} />
               <Route path="sections" element={<AdminSections />} />
+              <Route path="bulk-upload" element={<AdminBulkUpload />} />
               <Route path="responses" element={<AdminResponses />} />
               <Route path="users" element={<AdminUsers />} />
             </Route>
