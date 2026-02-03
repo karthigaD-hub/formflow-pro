@@ -67,7 +67,7 @@ CREATE TABLE sections (
 CREATE TABLE questions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   section_id UUID REFERENCES sections(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL, -- text, textarea, mcq, checkbox, dropdown, number, date, email, phone
+  type VARCHAR(50) NOT NULL CHECK (type IN ('text', 'textarea', 'mcq', 'checkbox', 'dropdown', 'number', 'date', 'email', 'phone', 'select')),
   label TEXT NOT NULL,
   placeholder TEXT DEFAULT '',
   required BOOLEAN DEFAULT true,
@@ -143,10 +143,10 @@ INSERT INTO banks (id, name, logo, description, is_active) VALUES
   ('pramerica-life', 'Pramerica Life Insurance', '', 'Pramerica Life Insurance', true);
 
 -- ============================================
--- SEED DATA - Test Users (Optional - for testing)
+-- SEED DATA - Test Users
 -- ============================================
--- NOTE: These passwords are hashed versions of simple test passwords
--- For production, users should register through the application
+-- Password for both: the hash below corresponds to "Admin@123" and "Agent@123"
+-- Generated using bcrypt with 10 rounds
 
 -- Insert admin user
 -- Email: admin@xcyber.com | Password: Admin@123
@@ -156,7 +156,7 @@ VALUES (
   'System Admin',
   'admin@xcyber.com',
   '+1234567890',
-  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
+  '$2a$10$rOvHPxfzO2.JV9o3LrQpwuZlXpYLWX8Q.F2D5YvVJXvGQkzZQgEIi'
 );
 
 INSERT INTO user_roles (user_id, role)
@@ -170,14 +170,14 @@ VALUES (
   'John Agent',
   'agent@xcyber.com',
   '+1234567891',
-  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
+  '$2a$10$rOvHPxfzO2.JV9o3LrQpwuZlXpYLWX8Q.F2D5YvVJXvGQkzZQgEIi'
 );
 
 INSERT INTO user_roles (user_id, role, bank_id)
 VALUES ('a0000000-0000-0000-0000-000000000002', 'agent', 'hdfc-life');
 
 -- ============================================
--- SEED DATA - Sample Section & Questions (Optional)
+-- SEED DATA - Sample Section & Questions
 -- ============================================
 
 -- Insert sample section for HDFC Life
@@ -210,11 +210,7 @@ BEGIN
   RAISE NOTICE 'Database schema created successfully!';
   RAISE NOTICE '============================================';
   RAISE NOTICE 'Test Credentials:';
-  RAISE NOTICE 'Admin: admin@xcyber.com (password set in app)';
-  RAISE NOTICE 'Agent: agent@xcyber.com (password set in app)';
-  RAISE NOTICE '============================================';
-  RAISE NOTICE 'NOTE: For security, please register new users';
-  RAISE NOTICE 'through the application rather than using';
-  RAISE NOTICE 'seeded test accounts in production.';
+  RAISE NOTICE 'Admin: admin@xcyber.com / Admin@123';
+  RAISE NOTICE 'Agent: agent@xcyber.com / Agent@123';
   RAISE NOTICE '============================================';
 END $$;

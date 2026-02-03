@@ -70,10 +70,26 @@ export interface JWTPayload {
   bankId?: string;
 }
 
+export interface BulkUploadResult {
+  total_rows: number;
+  inserted_rows: number;
+  failed_rows: number;
+  error_details: { row: number; error: string }[];
+  questions?: Question[];
+}
+
 declare global {
   namespace Express {
     interface Request {
       user?: JWTPayload;
+      file?: {
+        fieldname: string;
+        originalname: string;
+        encoding: string;
+        mimetype: string;
+        buffer: Buffer;
+        size: number;
+      };
     }
   }
 }

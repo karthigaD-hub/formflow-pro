@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Shield,
   LogOut,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,6 +23,7 @@ const sidebarLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { to: '/admin/banks', icon: Building2, label: 'Banks' },
   { to: '/admin/sections', icon: FileText, label: 'Sections & Questions' },
+  { to: '/admin/bulk-upload', icon: Upload, label: 'Bulk Upload' },
   { to: '/admin/responses', icon: MessageSquare, label: 'Responses' },
   { to: '/admin/users', icon: Users, label: 'Users' },
   { to: '/admin/settings', icon: Settings, label: 'Settings' },

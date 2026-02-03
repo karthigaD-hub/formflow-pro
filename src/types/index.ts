@@ -43,7 +43,7 @@ export interface Bank {
 }
 
 // Question types
-export type QuestionType = 'text' | 'textarea' | 'mcq' | 'checkbox' | 'dropdown' | 'number' | 'date' | 'email' | 'phone';
+export type QuestionType = 'text' | 'textarea' | 'mcq' | 'checkbox' | 'dropdown' | 'number' | 'date' | 'email' | 'phone' | 'select';
 
 export interface QuestionOption {
   id: string;

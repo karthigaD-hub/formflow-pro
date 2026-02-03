@@ -220,6 +220,81 @@ class ApiService {
     });
   }
 
+  // Bulk upload questions
+  async bulkUploadQuestions(formData: FormData): Promise<ApiResponse<{
+    total_rows: number;
+    inserted_rows: number;
+    failed_rows: number;
+    error_details: { row: number; error: string }[];
+  }>> {
+    const url = `${this.getBaseUrl()}/questions/bulk-upload`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...(this.token && { Authorization: `Bearer ${this.token}` }),
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.message || 'Upload failed',
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
+
+  // Download question template
+  async downloadQuestionTemplate(type: 'csv' | 'excel'): Promise<ApiResponse<Blob>> {
+    const endpoint = type === 'csv' ? '/questions/template/csv' : '/questions/template/excel';
+    const url = `${this.getBaseUrl()}${endpoint}`;
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          ...(this.token && { Authorization: `Bearer ${this.token}` }),
+        },
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: 'Failed to download template',
+        };
+      }
+
+      const blob = await response.blob();
+      return {
+        success: true,
+        data: blob,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
+
+  private getBaseUrl(): string {
+    return import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  }
+
   // Response endpoints
   async getResponses(filters?: {
     bankId?: string;
