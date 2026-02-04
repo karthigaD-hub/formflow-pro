@@ -7,7 +7,7 @@ dotenv.config();
 
 // Import routes
 import authRoutes from './routes/auth';
-import bankRoutes from './routes/banks';
+import providerRoutes from './routes/providers';
 import sectionRoutes from './routes/sections';
 import questionRoutes from './routes/questions';
 import responseRoutes from './routes/responses';
@@ -35,9 +35,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API Routes
+// API Routes - ALL PRIVATE (except auth endpoints)
 app.use('/api/auth', authRoutes);
-app.use('/api/banks', bankRoutes);
+app.use('/api/providers', providerRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/responses', responseRoutes);
@@ -60,7 +60,7 @@ app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║   🚀 XCyber Backend Server                                ║
+║   🚀 XCYPER Backend Server                                ║
 ║                                                           ║
 ║   Server running on: http://localhost:${PORT}              ║
 ║   API Base URL:      http://localhost:${PORT}/api          ║

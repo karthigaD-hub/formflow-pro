@@ -4,13 +4,13 @@ import { authenticateToken, requireRole } from '../middleware/auth';
 
 const router = Router();
 
-// Get all sections (with optional bankId filter)
+// Get all sections (with optional insuranceProviderId filter)
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { bankId } = req.query;
+    const { insuranceProviderId } = req.query;
     
     let sql = `
-      SELECT s.id, s.bank_id, s.title, s.description, s."order", s.is_active, s.created_at,
+      SELECT s.id, s.insurance_provider_id, s.title, s.description, s."order", s.is_active, s.created_at,
              COALESCE(json_agg(
                json_build_object(
                  'id', q.id,
@@ -29,9 +29,9 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     `;
     
     const params: any[] = [];
-    if (bankId) {
-      sql += ' WHERE s.bank_id = $1';
-      params.push(bankId);
+    if (insuranceProviderId) {
+      sql += ' WHERE s.insurance_provider_id = $1';
+      params.push(insuranceProviderId);
     }
     
     sql += ' GROUP BY s.id ORDER BY s."order"';
@@ -40,7 +40,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 
     const sections = result.rows.map((section) => ({
       id: section.id,
-      bankId: section.bank_id,
+      insuranceProviderId: section.insurance_provider_id,
       title: section.title,
       description: section.description,
       order: section.order,
@@ -62,7 +62,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     
     const result = await query(
-      `SELECT s.id, s.bank_id, s.title, s.description, s."order", s.is_active, s.created_at,
+      `SELECT s.id, s.insurance_provider_id, s.title, s.description, s."order", s.is_active, s.created_at,
               COALESCE(json_agg(
                 json_build_object(
                   'id', q.id,
@@ -92,7 +92,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
       success: true,
       data: {
         id: section.id,
-        bankId: section.bank_id,
+        insuranceProviderId: section.insurance_provider_id,
         title: section.title,
         description: section.description,
         order: section.order,
@@ -110,15 +110,21 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
 // Create section (admin only)
 router.post('/', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
   try {
-    const { bankId, title, description, order = 0, isActive = true } = req.body;
+    const { insuranceProviderId, title, description, order = 0, isActive = true } = req.body;
 
-    if (!bankId || !title) {
-      return res.status(400).json({ success: false, message: 'Bank ID and title are required' });
+    if (!insuranceProviderId || !title) {
+      return res.status(400).json({ success: false, message: 'Insurance provider ID and title are required' });
+    }
+
+    // Verify provider exists
+    const providerCheck = await query('SELECT id FROM insurance_providers WHERE id = $1', [insuranceProviderId]);
+    if (providerCheck.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid insurance provider' });
     }
 
     const result = await query(
-      'INSERT INTO sections (bank_id, title, description, "order", is_active) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [bankId, title, description || '', order, isActive]
+      'INSERT INTO sections (insurance_provider_id, title, description, "order", is_active) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [insuranceProviderId, title, description || '', order, isActive]
     );
 
     const section = result.rows[0];
@@ -126,7 +132,7 @@ router.post('/', authenticateToken, requireRole('admin'), async (req: Request, r
       success: true,
       data: {
         id: section.id,
-        bankId: section.bank_id,
+        insuranceProviderId: section.insurance_provider_id,
         title: section.title,
         description: section.description,
         order: section.order,
@@ -167,7 +173,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req: Request,
       success: true,
       data: {
         id: section.id,
-        bankId: section.bank_id,
+        insuranceProviderId: section.insurance_provider_id,
         title: section.title,
         description: section.description,
         order: section.order,

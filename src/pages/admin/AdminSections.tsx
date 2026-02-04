@@ -42,7 +42,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/services/api';
-import { INSURANCE_COMPANIES } from '@/constants/insuranceCompanies';
+import { INSURANCE_PROVIDERS } from '@/constants/insuranceProviders';
 import type { Section, Question, QuestionType } from '@/types';
 
 const questionTypes: { value: QuestionType; label: string }[] = [

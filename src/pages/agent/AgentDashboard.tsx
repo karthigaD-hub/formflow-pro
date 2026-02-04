@@ -13,28 +13,40 @@ import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import api from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import type { AgentStats, FormResponse, Bank } from '@/types';
+import { getProviderById } from '@/constants/insuranceProviders';
+import type { AgentStats, FormResponse, InsuranceProvider } from '@/types';
 
 export default function AgentDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<AgentStats | null>(null);
   const [recentResponses, setRecentResponses] = useState<FormResponse[]>([]);
-  const [bank, setBank] = useState<Bank | null>(null);
+  const [provider, setProvider] = useState<InsuranceProvider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadDashboardData();
-  }, [user?.bankId]);
+  }, [user?.insuranceProviderId]);
 
   const loadDashboardData = async () => {
-    if (!user?.bankId) return;
+    if (!user?.insuranceProviderId) return;
     
     setIsLoading(true);
     try {
-      const [statsRes, responsesRes, bankRes] = await Promise.all([
+      // Get provider info from constants
+      const providerInfo = getProviderById(user.insuranceProviderId);
+      if (providerInfo) {
+        setProvider({
+          id: providerInfo.id,
+          name: providerInfo.name,
+          logo: providerInfo.logo,
+          isActive: true,
+          createdAt: '',
+        });
+      }
+
+      const [statsRes, responsesRes] = await Promise.all([
         api.getAgentStats(),
-        api.getResponses({ bankId: user.bankId }),
-        api.getBank(user.bankId),
+        api.getResponses({ insuranceProviderId: user.insuranceProviderId }),
       ]);
       
       if (statsRes.success && statsRes.data) {
@@ -42,9 +54,6 @@ export default function AgentDashboard() {
       }
       if (responsesRes.success && responsesRes.data) {
         setRecentResponses(responsesRes.data.slice(0, 5));
-      }
-      if (bankRes.success && bankRes.data) {
-        setBank(bankRes.data);
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -65,36 +74,43 @@ export default function AgentDashboard() {
       title: 'Submitted',
       value: stats?.submittedResponses || 0,
       icon: CheckCircle,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
     },
     {
-      title: 'Pending',
+      title: 'Draft / Pending',
       value: stats?.pendingResponses || 0,
       icon: Clock,
-      color: 'text-warning',
-      bgColor: 'bg-warning/10',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-100',
     },
     {
       title: 'Unique Users',
       value: stats?.totalUsers || 0,
       icon: Users,
-      color: 'text-info',
-      bgColor: 'bg-info/10',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
     },
   ];
 
   return (
     <div className="p-6 space-y-6">
       {/* Welcome Card */}
-      {bank && (
-        <Card className="bg-gradient-to-r from-primary to-info text-primary-foreground border-0">
+      {provider && (
+        <Card className="bg-gradient-to-r from-primary to-primary/70 text-primary-foreground border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <img src={bank.logo} alt={bank.name} className="h-16 w-16 rounded-xl object-cover bg-primary-foreground/10" />
+              <img 
+                src={provider.logo} 
+                alt={provider.name} 
+                className="h-16 w-16 rounded-xl object-contain bg-white/90 p-2" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/64?text=Logo';
+                }}
+              />
               <div>
                 <h1 className="text-2xl font-bold">Welcome back, {user?.name}!</h1>
-                <p className="opacity-90">Managing responses for {bank.name}</p>
+                <p className="opacity-90">Managing responses for {provider.name}</p>
               </div>
             </div>
           </CardContent>
@@ -152,10 +168,10 @@ export default function AgentDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={response.isSubmitted ? 'default' : 'secondary'}>
-                        {response.isSubmitted ? 'Submitted' : 'In Progress'}
+                      <Badge variant={response.status === 'SUBMITTED' ? 'default' : 'secondary'}>
+                        {response.status === 'SUBMITTED' ? 'Submitted' : 'Draft'}
                       </Badge>
-                      {!response.isSubmitted && (
+                      {response.status !== 'SUBMITTED' && (
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <Phone className="h-4 w-4" />
                         </Button>
@@ -199,8 +215,8 @@ export default function AgentDashboard() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="w-full justify-start h-auto py-3">
-              <Link to="/agent/responses?status=pending" className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-warning" />
+              <Link to="/agent/responses?status=DRAFT" className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-yellow-600" />
                 <div className="text-left">
                   <p className="font-medium">Pending Forms</p>
                   <p className="text-xs text-muted-foreground">Help users complete</p>

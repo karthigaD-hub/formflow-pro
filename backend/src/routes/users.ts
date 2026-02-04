@@ -10,7 +10,7 @@ router.get('/', authenticateToken, requireRole('admin'), async (req: Request, re
     const { role } = req.query;
 
     let sql = `
-      SELECT u.id, u.name, u.email, u.phone, u.created_at, ur.role, ur.bank_id
+      SELECT u.id, u.name, u.email, u.phone, u.created_at, ur.role, ur.insurance_provider_id
       FROM users u
       JOIN user_roles ur ON u.id = ur.user_id
     `;
@@ -31,7 +31,7 @@ router.get('/', authenticateToken, requireRole('admin'), async (req: Request, re
       email: u.email,
       phone: u.phone,
       role: u.role,
-      bankId: u.bank_id,
+      insuranceProviderId: u.insurance_provider_id,
       createdAt: u.created_at,
     }));
 
@@ -48,7 +48,7 @@ router.get('/:id', authenticateToken, requireRole('admin'), async (req: Request,
     const { id } = req.params;
 
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.phone, u.created_at, ur.role, ur.bank_id
+      `SELECT u.id, u.name, u.email, u.phone, u.created_at, ur.role, ur.insurance_provider_id
        FROM users u
        JOIN user_roles ur ON u.id = ur.user_id
        WHERE u.id = $1`,
@@ -68,7 +68,7 @@ router.get('/:id', authenticateToken, requireRole('admin'), async (req: Request,
         email: u.email,
         phone: u.phone,
         role: u.role,
-        bankId: u.bank_id,
+        insuranceProviderId: u.insurance_provider_id,
         createdAt: u.created_at,
       },
     });
@@ -82,7 +82,7 @@ router.get('/:id', authenticateToken, requireRole('admin'), async (req: Request,
 router.put('/:id', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, role, bankId } = req.body;
+    const { name, email, phone, role, insuranceProviderId } = req.body;
 
     // Update user info
     await query(
@@ -98,15 +98,15 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req: Request,
     if (role) {
       await query(
         `UPDATE user_roles 
-         SET role = $1, bank_id = $2
+         SET role = $1, insurance_provider_id = $2
          WHERE user_id = $3`,
-        [role, bankId || null, id]
+        [role, insuranceProviderId || null, id]
       );
     }
 
     // Get updated user
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.phone, u.created_at, ur.role, ur.bank_id
+      `SELECT u.id, u.name, u.email, u.phone, u.created_at, ur.role, ur.insurance_provider_id
        FROM users u
        JOIN user_roles ur ON u.id = ur.user_id
        WHERE u.id = $1`,
@@ -126,7 +126,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req: Request,
         email: u.email,
         phone: u.phone,
         role: u.role,
-        bankId: u.bank_id,
+        insuranceProviderId: u.insurance_provider_id,
         createdAt: u.created_at,
       },
     });

@@ -5,7 +5,6 @@ import {
   Users as UsersIcon,
   Building2,
   Trash2,
-  Filter,
   Loader2,
   MoreVertical,
   Shield,
@@ -47,11 +46,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/services/api';
-import type { User as UserType, Bank } from '@/types';
+import { getProviderName } from '@/constants/insuranceProviders';
+import type { User as UserType } from '@/types';
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<UserType[]>([]);
-  const [banks, setBanks] = useState<Bank[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -59,23 +58,8 @@ export default function AdminUsers() {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
     loadUsers();
   }, [roleFilter]);
-
-  const loadData = async () => {
-    try {
-      const banksRes = await api.getBanks();
-      if (banksRes.success && banksRes.data) {
-        setBanks(banksRes.data);
-      }
-    } catch (error) {
-      console.error('Error loading banks:', error);
-    }
-  };
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -114,11 +98,6 @@ export default function AdminUsers() {
       user.phone?.toLowerCase().includes(searchLower)
     );
   });
-
-  const getBankName = (bankId?: string) => {
-    if (!bankId) return null;
-    return banks.find((b) => b.id === bankId)?.name || 'Unknown Bank';
-  };
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -192,7 +171,7 @@ export default function AdminUsers() {
                   <TableHead>User</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Bank</TableHead>
+                  <TableHead>Insurance Provider</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -222,8 +201,8 @@ export default function AdminUsers() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {user.role === 'agent' && user.bankId ? (
-                          <span className="text-sm">{getBankName(user.bankId)}</span>
+                        {user.role === 'agent' && user.insuranceProviderId ? (
+                          <span className="text-sm">{getProviderName(user.insuranceProviderId)}</span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
