@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Search, Building2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -26,24 +26,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/services/api';
-import type { Bank } from '@/types';
+import { INSURANCE_PROVIDERS } from '@/constants/insuranceProviders';
+import type { InsuranceProvider } from '@/types';
 
-// Bank logos (sample URLs - in production these would be actual bank logos)
-const bankLogos = [
-  'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=100&h=100&fit=crop',
-];
-
-export default function AdminBanks() {
-  const [banks, setBanks] = useState<Bank[]>([]);
+export default function AdminProviders() {
+  const [providers, setProviders] = useState<InsuranceProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<InsuranceProvider | null>(null);
   const [formData, setFormData] = useState({
+    id: '',
     name: '',
     logo: '',
     description: '',
@@ -53,20 +47,20 @@ export default function AdminBanks() {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadBanks();
+    loadProviders();
   }, []);
 
-  const loadBanks = async () => {
+  const loadProviders = async () => {
     setIsLoading(true);
     try {
-      const response = await api.getBanks();
+      const response = await api.getProviders();
       if (response.success && response.data) {
-        setBanks(response.data);
+        setProviders(response.data);
       }
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to load banks',
+        description: 'Failed to load insurance providers',
         variant: 'destructive',
       });
     } finally {
@@ -74,20 +68,22 @@ export default function AdminBanks() {
     }
   };
 
-  const handleOpenDialog = (bank?: Bank) => {
-    if (bank) {
-      setSelectedBank(bank);
+  const handleOpenDialog = (provider?: InsuranceProvider) => {
+    if (provider) {
+      setSelectedProvider(provider);
       setFormData({
-        name: bank.name,
-        logo: bank.logo,
-        description: bank.description || '',
-        isActive: bank.isActive,
+        id: provider.id,
+        name: provider.name,
+        logo: provider.logo,
+        description: provider.description || '',
+        isActive: provider.isActive,
       });
     } else {
-      setSelectedBank(null);
+      setSelectedProvider(null);
       setFormData({
+        id: '',
         name: '',
-        logo: bankLogos[Math.floor(Math.random() * bankLogos.length)],
+        logo: '',
         description: '',
         isActive: true,
       });
@@ -99,7 +95,7 @@ export default function AdminBanks() {
     if (!formData.name.trim()) {
       toast({
         title: 'Validation Error',
-        description: 'Bank name is required',
+        description: 'Provider name is required',
         variant: 'destructive',
       });
       return;
@@ -108,26 +104,26 @@ export default function AdminBanks() {
     setIsSaving(true);
     try {
       let response;
-      if (selectedBank) {
-        response = await api.updateBank(selectedBank.id, formData);
+      if (selectedProvider) {
+        response = await api.updateProvider(selectedProvider.id, formData);
       } else {
-        response = await api.createBank(formData);
+        response = await api.createProvider(formData);
       }
 
       if (response.success) {
         toast({
-          title: selectedBank ? 'Bank updated' : 'Bank created',
-          description: `${formData.name} has been ${selectedBank ? 'updated' : 'created'} successfully`,
+          title: selectedProvider ? 'Provider updated' : 'Provider created',
+          description: `${formData.name} has been ${selectedProvider ? 'updated' : 'created'} successfully`,
         });
         setIsDialogOpen(false);
-        loadBanks();
+        loadProviders();
       } else {
         throw new Error(response.error);
       }
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to save bank',
+        description: 'Failed to save provider',
         variant: 'destructive',
       });
     } finally {
@@ -136,31 +132,31 @@ export default function AdminBanks() {
   };
 
   const handleDelete = async () => {
-    if (!selectedBank) return;
+    if (!selectedProvider) return;
 
     try {
-      const response = await api.deleteBank(selectedBank.id);
+      const response = await api.deleteProvider(selectedProvider.id);
       if (response.success) {
         toast({
-          title: 'Bank deleted',
-          description: `${selectedBank.name} has been deleted`,
+          title: 'Provider deleted',
+          description: `${selectedProvider.name} has been deleted`,
         });
         setIsDeleteDialogOpen(false);
-        loadBanks();
+        loadProviders();
       } else {
         throw new Error(response.error);
       }
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to delete bank',
+        description: 'Failed to delete provider',
         variant: 'destructive',
       });
     }
   };
 
-  const filteredBanks = banks.filter((bank) =>
-    bank.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProviders = providers.filter((provider) =>
+    provider.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -168,12 +164,12 @@ export default function AdminBanks() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Banks</h1>
-          <p className="text-muted-foreground">Manage partner banks and their insurance sections</p>
+          <h1 className="text-2xl font-bold">Insurance Providers</h1>
+          <p className="text-muted-foreground">Manage insurance providers and their details</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="btn-gradient">
           <Plus className="h-4 w-4 mr-2" />
-          Add Bank
+          Add Provider
         </Button>
       </div>
 
@@ -181,42 +177,45 @@ export default function AdminBanks() {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search banks..."
+          placeholder="Search providers..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
         />
       </div>
 
-      {/* Banks Grid */}
+      {/* Providers Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : filteredBanks.length > 0 ? (
+      ) : filteredProviders.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredBanks.map((bank) => (
-            <Card key={bank.id} className="group card-hover">
+          {filteredProviders.map((provider) => (
+            <Card key={provider.id} className="group card-hover">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="h-16 w-16 rounded-xl bg-muted overflow-hidden flex-shrink-0">
                     <img
-                      src={bank.logo}
-                      alt={bank.name}
-                      className="h-full w-full object-cover"
+                      src={provider.logo}
+                      alt={provider.name}
+                      className="h-full w-full object-contain p-2"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/64?text=Logo';
+                      }}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-semibold truncate">{bank.name}</h3>
+                        <h3 className="font-semibold truncate">{provider.name}</h3>
                         <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                          {bank.description || 'No description'}
+                          {provider.description || 'No description'}
                         </p>
                       </div>
                       <div
                         className={`h-2 w-2 rounded-full mt-2 ${
-                          bank.isActive ? 'bg-green-500' : 'bg-gray-300'
+                          provider.isActive ? 'bg-green-500' : 'bg-gray-300'
                         }`}
                       />
                     </div>
@@ -224,7 +223,7 @@ export default function AdminBanks() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleOpenDialog(bank)}
+                        onClick={() => handleOpenDialog(provider)}
                       >
                         <Pencil className="h-3 w-3 mr-1" />
                         Edit
@@ -234,7 +233,7 @@ export default function AdminBanks() {
                         size="sm"
                         className="text-destructive hover:text-destructive"
                         onClick={() => {
-                          setSelectedBank(bank);
+                          setSelectedProvider(provider);
                           setIsDeleteDialogOpen(true);
                         }}
                       >
@@ -252,16 +251,16 @@ export default function AdminBanks() {
         <Card>
           <CardContent className="py-12 text-center">
             <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-            <h3 className="font-semibold mb-1">No banks found</h3>
+            <h3 className="font-semibold mb-1">No providers found</h3>
             <p className="text-sm text-muted-foreground mb-4">
               {searchQuery
                 ? 'Try adjusting your search'
-                : 'Get started by adding your first bank'}
+                : 'Get started by adding your first provider'}
             </p>
             {!searchQuery && (
               <Button onClick={() => handleOpenDialog()}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Bank
+                Add Provider
               </Button>
             )}
           </CardContent>
@@ -272,21 +271,32 @@ export default function AdminBanks() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{selectedBank ? 'Edit Bank' : 'Add New Bank'}</DialogTitle>
+            <DialogTitle>{selectedProvider ? 'Edit Provider' : 'Add New Provider'}</DialogTitle>
             <DialogDescription>
-              {selectedBank
-                ? 'Update the bank details below'
-                : 'Enter the details for the new bank'}
+              {selectedProvider
+                ? 'Update the provider details below'
+                : 'Enter the details for the new insurance provider'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {!selectedProvider && (
+              <div className="space-y-2">
+                <Label htmlFor="id">Provider ID</Label>
+                <Input
+                  id="id"
+                  value={formData.id}
+                  onChange={(e) => setFormData({ ...formData, id: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                  placeholder="e.g., hdfc-life"
+                />
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="name">Bank Name</Label>
+              <Label htmlFor="name">Provider Name</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter bank name"
+                placeholder="Enter provider name"
               />
             </div>
             <div className="space-y-2">
@@ -302,7 +312,7 @@ export default function AdminBanks() {
                   <img
                     src={formData.logo}
                     alt="Preview"
-                    className="h-16 w-16 rounded-lg object-cover"
+                    className="h-16 w-16 rounded-lg object-contain bg-muted p-1"
                   />
                 </div>
               )}
@@ -313,7 +323,7 @@ export default function AdminBanks() {
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Brief description of the bank"
+                placeholder="Brief description of the provider"
                 rows={3}
               />
             </div>
@@ -348,9 +358,9 @@ export default function AdminBanks() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Bank</AlertDialogTitle>
+            <AlertDialogTitle>Delete Provider</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{selectedBank?.name}"? This will also delete all
+              Are you sure you want to delete "{selectedProvider?.name}"? This will also delete all
               associated sections and questions. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

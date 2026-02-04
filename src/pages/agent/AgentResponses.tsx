@@ -6,11 +6,9 @@ import {
   Mail,
   MessageSquare,
   User,
-  Calendar,
   CheckCircle,
   Clock,
   Loader2,
-  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,20 +53,20 @@ export default function AgentResponses() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user?.bankId) {
+    if (user?.insuranceProviderId) {
       loadData();
     }
-  }, [user?.bankId]);
+  }, [user?.insuranceProviderId]);
 
   useEffect(() => {
-    if (user?.bankId) {
+    if (user?.insuranceProviderId) {
       loadResponses();
     }
-  }, [sectionFilter, statusFilter, user?.bankId]);
+  }, [sectionFilter, statusFilter, user?.insuranceProviderId]);
 
   const loadData = async () => {
     try {
-      const sectionsRes = await api.getSections(user?.bankId);
+      const sectionsRes = await api.getSections(user?.insuranceProviderId);
       if (sectionsRes.success && sectionsRes.data) {
         setSections(sectionsRes.data);
       }
@@ -78,15 +76,15 @@ export default function AgentResponses() {
   };
 
   const loadResponses = async () => {
-    if (!user?.bankId) return;
+    if (!user?.insuranceProviderId) return;
     
     setIsLoading(true);
     try {
-      const filters: { bankId?: string; sectionId?: string; isSubmitted?: boolean } = {
-        bankId: user.bankId,
+      const filters: { insuranceProviderId?: string; sectionId?: string; status?: 'DRAFT' | 'SUBMITTED' } = {
+        insuranceProviderId: user.insuranceProviderId,
       };
       if (sectionFilter !== 'all') filters.sectionId = sectionFilter;
-      if (statusFilter !== 'all') filters.isSubmitted = statusFilter === 'submitted';
+      if (statusFilter !== 'all') filters.status = statusFilter as 'DRAFT' | 'SUBMITTED';
 
       const response = await api.getResponses(filters);
       if (response.success && response.data) {
@@ -122,7 +120,7 @@ export default function AgentResponses() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Responses</h1>
-          <p className="text-muted-foreground">View and manage form submissions for your bank</p>
+          <p className="text-muted-foreground">View and manage form submissions for your insurance provider</p>
         </div>
       </div>
 
@@ -156,8 +154,8 @@ export default function AgentResponses() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="pending">In Progress</SelectItem>
+                <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                <SelectItem value="DRAFT">Draft</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -202,7 +200,7 @@ export default function AgentResponses() {
                           className="h-8 w-8"
                           onClick={() => handleCall(response.user?.phone || '')}
                         >
-                          <Phone className="h-4 w-4 text-success" />
+                          <Phone className="h-4 w-4 text-green-600" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -216,11 +214,11 @@ export default function AgentResponses() {
                     </TableCell>
                     <TableCell>{response.section?.title}</TableCell>
                     <TableCell>
-                      <Badge variant={response.isSubmitted ? 'default' : 'secondary'}>
-                        {response.isSubmitted ? (
+                      <Badge variant={response.status === 'SUBMITTED' ? 'default' : 'secondary'}>
+                        {response.status === 'SUBMITTED' ? (
                           <><CheckCircle className="h-3 w-3 mr-1" /> Submitted</>
                         ) : (
-                          <><Clock className="h-3 w-3 mr-1" /> In Progress</>
+                          <><Clock className="h-3 w-3 mr-1" /> Draft</>
                         )}
                       </Badge>
                     </TableCell>

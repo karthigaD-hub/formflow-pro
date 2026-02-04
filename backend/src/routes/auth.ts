@@ -9,7 +9,7 @@ const router = Router();
 // Register
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { name, email, phone, password, role, bankId } = req.body;
+    const { name, email, phone, password, role, insuranceProviderId } = req.body;
 
     // Validate required fields
     if (!name || !email || !phone || !password || !role) {
@@ -21,10 +21,23 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Invalid role' });
     }
 
+    // Agent must have an insurance provider
+    if (role === 'agent' && !insuranceProviderId) {
+      return res.status(400).json({ success: false, message: 'Insurance provider is required for agents' });
+    }
+
     // Check if email exists
     const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
+    }
+
+    // Validate insurance provider if provided
+    if (insuranceProviderId) {
+      const providerCheck = await query('SELECT id FROM insurance_providers WHERE id = $1', [insuranceProviderId]);
+      if (providerCheck.rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'Invalid insurance provider' });
+      }
     }
 
     // Hash password
@@ -39,12 +52,12 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Assign role
     await query(
-      'INSERT INTO user_roles (user_id, role, bank_id) VALUES ($1, $2, $3)',
-      [user.id, role as UserRole, bankId || null]
+      'INSERT INTO user_roles (user_id, role, insurance_provider_id) VALUES ($1, $2, $3)',
+      [user.id, role as UserRole, insuranceProviderId || null]
     );
 
     // Generate token
-    const token = generateToken({ userId: user.id, role: role as UserRole, bankId });
+    const token = generateToken({ userId: user.id, role: role as UserRole, insuranceProviderId });
 
     res.status(201).json({
       success: true,
@@ -55,7 +68,7 @@ router.post('/register', async (req: Request, res: Response) => {
           email: user.email,
           phone: user.phone,
           role,
-          bankId,
+          insuranceProviderId,
           createdAt: user.created_at,
         },
         token,
@@ -78,7 +91,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     // Get user with role
     const userResult = await query(
-      `SELECT u.id, u.name, u.email, u.phone, u.password_hash, u.created_at, ur.role, ur.bank_id
+      `SELECT u.id, u.name, u.email, u.phone, u.password_hash, u.created_at, ur.role, ur.insurance_provider_id
        FROM users u
        JOIN user_roles ur ON u.id = ur.user_id
        WHERE u.email = $1 AND ur.role = $2`,
@@ -98,7 +111,11 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // Generate token
-    const token = generateToken({ userId: user.id, role: user.role, bankId: user.bank_id });
+    const token = generateToken({ 
+      userId: user.id, 
+      role: user.role, 
+      insuranceProviderId: user.insurance_provider_id 
+    });
 
     res.json({
       success: true,
@@ -109,7 +126,7 @@ router.post('/login', async (req: Request, res: Response) => {
           email: user.email,
           phone: user.phone,
           role: user.role,
-          bankId: user.bank_id,
+          insuranceProviderId: user.insurance_provider_id,
           createdAt: user.created_at,
         },
         token,
@@ -127,7 +144,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     const userId = req.user?.userId;
 
     const userResult = await query(
-      `SELECT u.id, u.name, u.email, u.phone, u.created_at, ur.role, ur.bank_id
+      `SELECT u.id, u.name, u.email, u.phone, u.created_at, ur.role, ur.insurance_provider_id
        FROM users u
        JOIN user_roles ur ON u.id = ur.user_id
        WHERE u.id = $1`,
@@ -148,7 +165,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
         email: user.email,
         phone: user.phone,
         role: user.role,
-        bankId: user.bank_id,
+        insuranceProviderId: user.insurance_provider_id,
         createdAt: user.created_at,
       },
     });

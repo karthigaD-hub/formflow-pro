@@ -4,24 +4,23 @@ import type {
   LoginCredentials,
   RegisterData,
   User,
-  Bank,
+  InsuranceProvider,
   Section,
   Question,
   FormResponse,
   AdminStats,
   AgentStats,
+  BulkUploadResult,
 } from '@/types';
 
 // Configure your backend URL here
-// For development: http://localhost:3001/api
-// The backend must be running on this URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 class ApiService {
   private token: string | null = null;
 
   constructor() {
-    this.token = localStorage.getItem('xcyber_token');
+    this.token = localStorage.getItem('xcyper_token');
   }
 
   private async request<T>(
@@ -42,7 +41,6 @@ class ApiService {
         headers,
       });
 
-      // Handle non-JSON responses
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         if (!response.ok) {
@@ -69,7 +67,6 @@ class ApiService {
     } catch (error) {
       console.error(`API Error [${endpoint}]:`, error);
       
-      // More specific error messages
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
         return {
           success: false,
@@ -87,14 +84,18 @@ class ApiService {
   setToken(token: string | null) {
     this.token = token;
     if (token) {
-      localStorage.setItem('xcyber_token', token);
+      localStorage.setItem('xcyper_token', token);
     } else {
-      localStorage.removeItem('xcyber_token');
+      localStorage.removeItem('xcyper_token');
     }
   }
 
   getToken() {
     return this.token;
+  }
+
+  private getBaseUrl(): string {
+    return API_BASE_URL;
   }
 
   // Auth endpoints
@@ -122,45 +123,45 @@ class ApiService {
 
   async logout(): Promise<void> {
     this.setToken(null);
-    localStorage.removeItem('xcyber_user');
+    localStorage.removeItem('xcyper_user');
   }
 
   async getProfile(): Promise<ApiResponse<User>> {
     return this.request<User>('/auth/profile');
   }
 
-  // Bank endpoints
-  async getBanks(): Promise<ApiResponse<Bank[]>> {
-    return this.request<Bank[]>('/banks');
+  // Insurance Provider endpoints
+  async getProviders(): Promise<ApiResponse<InsuranceProvider[]>> {
+    return this.request<InsuranceProvider[]>('/providers');
   }
 
-  async getBank(id: string): Promise<ApiResponse<Bank>> {
-    return this.request<Bank>(`/banks/${id}`);
+  async getProvider(id: string): Promise<ApiResponse<InsuranceProvider>> {
+    return this.request<InsuranceProvider>(`/providers/${id}`);
   }
 
-  async createBank(data: Partial<Bank>): Promise<ApiResponse<Bank>> {
-    return this.request<Bank>('/banks', {
+  async createProvider(data: Partial<InsuranceProvider>): Promise<ApiResponse<InsuranceProvider>> {
+    return this.request<InsuranceProvider>('/providers', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateBank(id: string, data: Partial<Bank>): Promise<ApiResponse<Bank>> {
-    return this.request<Bank>(`/banks/${id}`, {
+  async updateProvider(id: string, data: Partial<InsuranceProvider>): Promise<ApiResponse<InsuranceProvider>> {
+    return this.request<InsuranceProvider>(`/providers/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteBank(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/banks/${id}`, {
+  async deleteProvider(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/providers/${id}`, {
       method: 'DELETE',
     });
   }
 
   // Section endpoints
-  async getSections(bankId?: string): Promise<ApiResponse<Section[]>> {
-    const query = bankId ? `?bankId=${bankId}` : '';
+  async getSections(insuranceProviderId?: string): Promise<ApiResponse<Section[]>> {
+    const query = insuranceProviderId ? `?insuranceProviderId=${insuranceProviderId}` : '';
     return this.request<Section[]>(`/sections${query}`);
   }
 
@@ -221,12 +222,7 @@ class ApiService {
   }
 
   // Bulk upload questions
-  async bulkUploadQuestions(formData: FormData): Promise<ApiResponse<{
-    total_rows: number;
-    inserted_rows: number;
-    failed_rows: number;
-    error_details: { row: number; error: string }[];
-  }>> {
+  async bulkUploadQuestions(formData: FormData): Promise<ApiResponse<BulkUploadResult>> {
     const url = `${this.getBaseUrl()}/questions/bulk-upload`;
     
     try {
@@ -291,22 +287,20 @@ class ApiService {
     }
   }
 
-  private getBaseUrl(): string {
-    return import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-  }
-
   // Response endpoints
   async getResponses(filters?: {
-    bankId?: string;
+    insuranceProviderId?: string;
     sectionId?: string;
     userId?: string;
     isSubmitted?: boolean;
+    status?: 'DRAFT' | 'SUBMITTED';
   }): Promise<ApiResponse<FormResponse[]>> {
     const params = new URLSearchParams();
-    if (filters?.bankId) params.append('bankId', filters.bankId);
+    if (filters?.insuranceProviderId) params.append('insuranceProviderId', filters.insuranceProviderId);
     if (filters?.sectionId) params.append('sectionId', filters.sectionId);
     if (filters?.userId) params.append('userId', filters.userId);
     if (filters?.isSubmitted !== undefined) params.append('isSubmitted', String(filters.isSubmitted));
+    if (filters?.status) params.append('status', filters.status);
     
     const query = params.toString() ? `?${params.toString()}` : '';
     return this.request<FormResponse[]>(`/responses${query}`);
@@ -322,7 +316,7 @@ class ApiService {
 
   async saveResponse(data: {
     sectionId: string;
-    bankId: string;
+    insuranceProviderId: string;
     responses: { questionId: string; value: string | string[] }[];
   }): Promise<ApiResponse<FormResponse>> {
     return this.request<FormResponse>('/responses/save', {

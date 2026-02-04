@@ -9,30 +9,20 @@ import {
   ChevronRight,
   Shield,
   LogOut,
-  Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import api from '@/services/api';
-import type { Bank } from '@/types';
+import { getProviderById } from '@/constants/insuranceProviders';
 
 export default function AgentLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [bank, setBank] = useState<Bank | null>(null);
   const location = useLocation();
   const { user, logout } = useAuth();
 
-  useEffect(() => {
-    if (user?.bankId) {
-      api.getBank(user.bankId).then((res) => {
-        if (res.success && res.data) {
-          setBank(res.data);
-        }
-      });
-    }
-  }, [user?.bankId]);
+  // Get provider info from constants
+  const provider = user?.insuranceProviderId ? getProviderById(user.insuranceProviderId) : null;
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -75,7 +65,7 @@ export default function AgentLayout() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
                 <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
               </div>
-              <span className="text-lg font-bold text-sidebar-foreground">XCyber</span>
+              <span className="text-lg font-bold text-sidebar-foreground">XCYPER</span>
             </Link>
             <button
               className="lg:hidden text-sidebar-foreground"
@@ -85,14 +75,21 @@ export default function AgentLayout() {
             </button>
           </div>
 
-          {/* Bank Info */}
-          {bank && (
+          {/* Provider Info */}
+          {provider && (
             <div className="px-4 py-4 border-b border-sidebar-border">
               <div className="flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent/50">
-                <img src={bank.logo} alt={bank.name} className="h-10 w-10 rounded-lg object-cover" />
-                <div>
-                  <p className="font-medium text-sm text-sidebar-foreground">{bank.name}</p>
-                  <p className="text-xs text-sidebar-foreground/60">Assigned Bank</p>
+                <img 
+                  src={provider.logo} 
+                  alt={provider.name} 
+                  className="h-10 w-10 rounded-lg object-contain bg-white p-1" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40?text=Logo';
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm text-sidebar-foreground truncate">{provider.name}</p>
+                  <p className="text-xs text-sidebar-foreground/60">Assigned Provider</p>
                 </div>
               </div>
             </div>

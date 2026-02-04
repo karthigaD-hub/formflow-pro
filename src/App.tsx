@@ -16,7 +16,7 @@ import NotFound from "./pages/NotFound";
 // Admin
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminBanks from "./pages/admin/AdminBanks";
+import AdminProviders from "./pages/admin/AdminProviders";
 import AdminSections from "./pages/admin/AdminSections";
 import AdminResponses from "./pages/admin/AdminResponses";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -59,7 +59,7 @@ const App = () => (
               }
             >
               <Route index element={<AdminDashboard />} />
-              <Route path="banks" element={<AdminBanks />} />
+              <Route path="providers" element={<AdminProviders />} />
               <Route path="sections" element={<AdminSections />} />
               <Route path="bulk-upload" element={<AdminBulkUpload />} />
               <Route path="responses" element={<AdminResponses />} />

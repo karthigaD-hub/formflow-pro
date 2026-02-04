@@ -1,48 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, FileText, CheckCircle, Clock, ArrowRight, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileText, CheckCircle, Clock, ArrowRight, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
-import type { Bank, Section, FormResponse } from '@/types';
+import { INSURANCE_PROVIDERS } from '@/constants/insuranceProviders';
+import type { Section, FormResponse, InsuranceProvider } from '@/types';
 
 export default function UserDashboard() {
   const { user } = useAuth();
-  const [banks, setBanks] = useState<Bank[]>([]);
-  const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<InsuranceProvider | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [responses, setResponses] = useState<FormResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    loadBanks();
-  }, []);
-
-  useEffect(() => {
-    if (selectedBank) {
-      loadSections(selectedBank.id);
+    if (selectedProvider) {
+      loadSections(selectedProvider.id);
     }
-  }, [selectedBank]);
+  }, [selectedProvider]);
 
-  const loadBanks = async () => {
-    try {
-      const res = await api.getBanks();
-      if (res.success && res.data) {
-        setBanks(res.data.filter((b) => b.isActive));
-      }
-    } catch (error) {
-      console.error('Error loading banks:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadSections = async (bankId: string) => {
+  const loadSections = async (providerId: string) => {
+    setIsLoading(true);
     try {
       const [sectionsRes, responsesRes] = await Promise.all([
-        api.getSections(bankId),
+        api.getSections(providerId),
         api.getResponses({ userId: user?.id }),
       ]);
       if (sectionsRes.success && sectionsRes.data) {
@@ -53,46 +37,49 @@ export default function UserDashboard() {
       }
     } catch (error) {
       console.error('Error loading sections:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const getResponseStatus = (sectionId: string) => {
     const response = responses.find((r) => r.sectionId === sectionId);
     if (!response) return null;
-    return response.isSubmitted ? 'submitted' : 'in_progress';
+    return response.status;
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Convert constants to provider format
+  const providers: InsuranceProvider[] = INSURANCE_PROVIDERS.map(p => ({
+    id: p.id,
+    name: p.name,
+    logo: p.logo,
+    isActive: true,
+    createdAt: '',
+  }));
 
   return (
     <div className="container py-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Welcome, {user?.name}!</h1>
-        <p className="text-muted-foreground">Select a bank to view and fill insurance forms</p>
+        <p className="text-muted-foreground">Select an insurance provider to view and fill forms</p>
       </div>
 
-      {!selectedBank ? (
+      {!selectedProvider ? (
         <>
-          <h2 className="text-xl font-semibold">Select a Bank</h2>
+          <h2 className="text-xl font-semibold">Select Insurance Provider</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {banks.map((bank) => (
-              <Card
-                key={bank.id}
-                className="cursor-pointer card-hover"
-                onClick={() => setSelectedBank(bank)}
-              >
+            {providers.map((provider) => (
+              <Card key={provider.id} className="cursor-pointer card-hover" onClick={() => setSelectedProvider(provider)}>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
-                    <img src={bank.logo} alt={bank.name} className="h-16 w-16 rounded-xl object-cover" />
+                    <img 
+                      src={provider.logo} 
+                      alt={provider.name} 
+                      className="h-16 w-16 rounded-xl object-contain bg-muted p-2" 
+                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/64?text=Logo'; }}
+                    />
                     <div>
-                      <h3 className="font-semibold text-lg">{bank.name}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{bank.description}</p>
+                      <h3 className="font-semibold text-lg">{provider.name}</h3>
                     </div>
                   </div>
                 </CardContent>
@@ -104,57 +91,51 @@ export default function UserDashboard() {
         <>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src={selectedBank.logo} alt={selectedBank.name} className="h-12 w-12 rounded-xl object-cover" />
+              <img src={selectedProvider.logo} alt={selectedProvider.name} className="h-12 w-12 rounded-xl object-contain bg-muted p-1" />
               <div>
-                <h2 className="text-xl font-semibold">{selectedBank.name}</h2>
+                <h2 className="text-xl font-semibold">{selectedProvider.name}</h2>
                 <p className="text-sm text-muted-foreground">Available forms</p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => setSelectedBank(null)}>
-              Change Bank
-            </Button>
+            <Button variant="outline" onClick={() => setSelectedProvider(null)}>Change Provider</Button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {sections.map((section) => {
-              const status = getResponseStatus(section.id);
-              return (
-                <Card key={section.id} className="card-hover">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
-                        <div className="p-3 rounded-xl bg-primary/10">
-                          <FileText className="h-6 w-6 text-primary" />
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {sections.map((section) => {
+                const status = getResponseStatus(section.id);
+                return (
+                  <Card key={section.id} className="card-hover">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 rounded-xl bg-primary/10"><FileText className="h-6 w-6 text-primary" /></div>
+                          <div>
+                            <h3 className="font-semibold">{section.title}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">{section.description}</p>
+                            <p className="text-xs text-muted-foreground mt-2">{section.questions?.length || 0} questions</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold">{section.title}</h3>
-                          <p className="text-sm text-muted-foreground mt-1">{section.description}</p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {section.questions?.length || 0} questions
-                          </p>
-                        </div>
+                        {status && (
+                          <Badge variant={status === 'SUBMITTED' ? 'default' : 'secondary'}>
+                            {status === 'SUBMITTED' ? <><CheckCircle className="h-3 w-3 mr-1" /> Submitted</> : <><Clock className="h-3 w-3 mr-1" /> Draft</>}
+                          </Badge>
+                        )}
                       </div>
-                      {status && (
-                        <Badge variant={status === 'submitted' ? 'default' : 'secondary'}>
-                          {status === 'submitted' ? (
-                            <><CheckCircle className="h-3 w-3 mr-1" /> Submitted</>
-                          ) : (
-                            <><Clock className="h-3 w-3 mr-1" /> In Progress</>
-                          )}
-                        </Badge>
-                      )}
-                    </div>
-                    <Button asChild className="w-full mt-4">
-                      <Link to={`/form/${section.id}`}>
-                        {status === 'submitted' ? 'View Response' : status === 'in_progress' ? 'Continue' : 'Start Form'}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                      <Button asChild className="w-full mt-4">
+                        <Link to={`/form/${section.id}?provider=${selectedProvider.id}`}>
+                          {status === 'SUBMITTED' ? 'View Response' : status === 'DRAFT' ? 'Continue' : 'Start Form'}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
     </div>

@@ -7,7 +7,6 @@ import {
   TrendingUp, 
   Clock,
   CheckCircle,
-  AlertCircle,
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
@@ -68,8 +67,8 @@ export default function AdminDashboard() {
       trendUp: true,
     },
     {
-      title: 'Active Banks',
-      value: stats?.totalBanks || 0,
+      title: 'Insurance Providers',
+      value: stats?.totalProviders || 0,
       icon: FileText,
       color: 'text-green-500',
       bgColor: 'bg-green-500/10',
@@ -136,7 +135,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-500/10">
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-yellow-500" />
-                <span className="font-medium">Pending</span>
+                <span className="font-medium">Draft / Pending</span>
               </div>
               <span className="text-2xl font-bold">{stats?.pendingResponses || 0}</span>
             </div>
@@ -168,12 +167,12 @@ export default function AdminDashboard() {
                       <div>
                         <p className="font-medium text-sm">{response.user?.name || 'Anonymous'}</p>
                         <p className="text-xs text-muted-foreground">
-                          {response.bank?.name} - {response.section?.title}
+                          {response.insuranceProvider?.name} - {response.section?.title}
                         </p>
                       </div>
                     </div>
                     <Badge variant={response.isSubmitted ? 'default' : 'secondary'}>
-                      {response.isSubmitted ? 'Submitted' : 'In Progress'}
+                      {response.status === 'SUBMITTED' ? 'Submitted' : 'Draft'}
                     </Badge>
                   </div>
                 ))}
@@ -196,9 +195,9 @@ export default function AdminDashboard() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-              <Link to="/admin/banks">
+              <Link to="/admin/providers">
                 <Building2 className="h-6 w-6" />
-                <span>Manage Banks</span>
+                <span>Manage Providers</span>
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">

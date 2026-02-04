@@ -8,11 +8,10 @@ import {
   CheckCircle,
   Clock,
   Loader2,
-  Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -48,17 +47,17 @@ export default function AgentLeads() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user?.bankId) {
+    if (user?.insuranceProviderId) {
       loadResponses();
     }
-  }, [user?.bankId]);
+  }, [user?.insuranceProviderId]);
 
   const loadResponses = async () => {
-    if (!user?.bankId) return;
+    if (!user?.insuranceProviderId) return;
     
     setIsLoading(true);
     try {
-      const response = await api.getResponses({ bankId: user.bankId });
+      const response = await api.getResponses({ insuranceProviderId: user.insuranceProviderId });
       if (response.success && response.data) {
         setResponses(response.data);
       }
@@ -86,7 +85,7 @@ export default function AgentLeads() {
       }
       acc[userId].responses.push(response);
       acc[userId].totalForms++;
-      if (response.isSubmitted) {
+      if (response.status === 'SUBMITTED') {
         acc[userId].completedForms++;
       } else {
         acc[userId].pendingForms++;

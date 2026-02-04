@@ -13,15 +13,15 @@ export interface UserRole_DB {
   id: string;
   user_id: string;
   role: UserRole;
-  bank_id?: string;
+  insurance_provider_id?: string;
 }
 
 export interface UserWithRole extends User {
   role: UserRole;
-  bank_id?: string;
+  insurance_provider_id?: string;
 }
 
-export interface Bank {
+export interface InsuranceProvider {
   id: string;
   name: string;
   logo: string;
@@ -32,7 +32,7 @@ export interface Bank {
 
 export interface Section {
   id: string;
-  bank_id: string;
+  insurance_provider_id: string;
   title: string;
   description?: string;
   order: number;
@@ -56,8 +56,9 @@ export interface FormResponse {
   id: string;
   user_id: string;
   section_id: string;
-  bank_id: string;
+  insurance_provider_id: string;
   responses: any;
+  status: 'DRAFT' | 'SUBMITTED';
   is_submitted: boolean;
   submitted_at?: Date;
   created_at: Date;
@@ -67,7 +68,7 @@ export interface FormResponse {
 export interface JWTPayload {
   userId: string;
   role: UserRole;
-  bankId?: string;
+  insuranceProviderId?: string;
 }
 
 export interface BulkUploadResult {

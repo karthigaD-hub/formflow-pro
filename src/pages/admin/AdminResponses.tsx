@@ -3,18 +3,15 @@ import {
   Search, 
   Download, 
   Eye, 
-  Filter,
   MessageSquare,
   User,
-  Building2,
-  Calendar,
   CheckCircle,
   Clock,
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -40,43 +37,28 @@ import {
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/services/api';
-import type { Bank, FormResponse } from '@/types';
+import { INSURANCE_PROVIDERS } from '@/constants/insuranceProviders';
+import type { FormResponse } from '@/types';
 
 export default function AdminResponses() {
   const [responses, setResponses] = useState<FormResponse[]>([]);
-  const [banks, setBanks] = useState<Bank[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBankId, setSelectedBankId] = useState<string>('all');
+  const [selectedProviderId, setSelectedProviderId] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedResponse, setSelectedResponse] = useState<FormResponse | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
     loadResponses();
-  }, [selectedBankId, statusFilter]);
-
-  const loadData = async () => {
-    try {
-      const banksRes = await api.getBanks();
-      if (banksRes.success && banksRes.data) {
-        setBanks(banksRes.data);
-      }
-    } catch (error) {
-      console.error('Error loading banks:', error);
-    }
-  };
+  }, [selectedProviderId, statusFilter]);
 
   const loadResponses = async () => {
     setIsLoading(true);
     try {
-      const filters: { bankId?: string; isSubmitted?: boolean } = {};
-      if (selectedBankId !== 'all') filters.bankId = selectedBankId;
-      if (statusFilter !== 'all') filters.isSubmitted = statusFilter === 'submitted';
+      const filters: { insuranceProviderId?: string; status?: 'DRAFT' | 'SUBMITTED' } = {};
+      if (selectedProviderId !== 'all') filters.insuranceProviderId = selectedProviderId;
+      if (statusFilter !== 'all') filters.status = statusFilter as 'DRAFT' | 'SUBMITTED';
 
       const response = await api.getResponses(filters);
       if (response.success && response.data) {
@@ -94,20 +76,20 @@ export default function AdminResponses() {
     return (
       response.user?.name?.toLowerCase().includes(searchLower) ||
       response.user?.email?.toLowerCase().includes(searchLower) ||
-      response.bank?.name?.toLowerCase().includes(searchLower) ||
+      response.insuranceProvider?.name?.toLowerCase().includes(searchLower) ||
       response.section?.title?.toLowerCase().includes(searchLower)
     );
   });
 
   const exportToCSV = () => {
-    const headers = ['User Name', 'Email', 'Phone', 'Bank', 'Section', 'Status', 'Submitted At'];
+    const headers = ['User Name', 'Email', 'Phone', 'Insurance Provider', 'Section', 'Status', 'Submitted At'];
     const rows = filteredResponses.map((r) => [
       r.user?.name || '',
       r.user?.email || '',
       r.user?.phone || '',
-      r.bank?.name || '',
+      r.insuranceProvider?.name || '',
       r.section?.title || '',
-      r.isSubmitted ? 'Submitted' : 'In Progress',
+      r.status,
       r.submittedAt || '',
     ]);
 
@@ -144,20 +126,20 @@ export default function AdminResponses() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, email, or bank..."
+                placeholder="Search by name, email, or provider..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
-            <Select value={selectedBankId} onValueChange={setSelectedBankId}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Banks" />
+            <Select value={selectedProviderId} onValueChange={setSelectedProviderId}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="All Insurance Providers" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Banks</SelectItem>
-                {banks.map((bank) => (
-                  <SelectItem key={bank.id} value={bank.id}>{bank.name}</SelectItem>
+              <SelectContent className="max-h-60">
+                <SelectItem value="all">All Insurance Providers</SelectItem>
+                {INSURANCE_PROVIDERS.map((provider) => (
+                  <SelectItem key={provider.id} value={provider.id}>{provider.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -167,8 +149,8 @@ export default function AdminResponses() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="pending">In Progress</SelectItem>
+                <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                <SelectItem value="DRAFT">Draft</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -187,7 +169,7 @@ export default function AdminResponses() {
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
-                  <TableHead>Bank</TableHead>
+                  <TableHead>Insurance Provider</TableHead>
                   <TableHead>Section</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -210,19 +192,19 @@ export default function AdminResponses() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {response.bank?.logo && (
-                          <img src={response.bank.logo} alt="" className="h-6 w-6 rounded object-cover" />
+                        {response.insuranceProvider?.logo && (
+                          <img src={response.insuranceProvider.logo} alt="" className="h-6 w-6 rounded object-contain" />
                         )}
-                        {response.bank?.name}
+                        <span className="text-sm">{response.insuranceProvider?.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>{response.section?.title}</TableCell>
                     <TableCell>
-                      <Badge variant={response.isSubmitted ? 'default' : 'secondary'}>
-                        {response.isSubmitted ? (
+                      <Badge variant={response.status === 'SUBMITTED' ? 'default' : 'secondary'}>
+                        {response.status === 'SUBMITTED' ? (
                           <><CheckCircle className="h-3 w-3 mr-1" /> Submitted</>
                         ) : (
-                          <><Clock className="h-3 w-3 mr-1" /> In Progress</>
+                          <><Clock className="h-3 w-3 mr-1" /> Draft</>
                         )}
                       </Badge>
                     </TableCell>
@@ -276,8 +258,8 @@ export default function AdminResponses() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-muted-foreground">Status</Label>
-                  <Badge variant={selectedResponse.isSubmitted ? 'default' : 'secondary'}>
-                    {selectedResponse.isSubmitted ? 'Submitted' : 'In Progress'}
+                  <Badge variant={selectedResponse.status === 'SUBMITTED' ? 'default' : 'secondary'}>
+                    {selectedResponse.status}
                   </Badge>
                 </div>
               </div>
