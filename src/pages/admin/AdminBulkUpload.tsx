@@ -345,9 +345,9 @@ export default function AdminBulkUpload() {
                   <SelectValue placeholder="Select company" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
-                  {INSURANCE_COMPANIES.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
+                  {INSURANCE_PROVIDERS.map((provider) => (
+                    <SelectItem key={provider.id} value={provider.id}>
+                      {provider.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -13,7 +13,7 @@ interface AuthContextType {
     phone: string;
     password: string;
     role: UserRole;
-    bankId?: string;
+    insuranceProviderId?: string;
   }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     phone: string;
     password: string;
     role: UserRole;
-    bankId?: string;
+    insuranceProviderId?: string;
   }) => {
     const response = await api.register(data);
     
