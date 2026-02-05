@@ -59,7 +59,7 @@ const questionTypes: { value: QuestionType; label: string }[] = [
 
 export default function AdminSections() {
   const [sections, setSections] = useState<Section[]>([]);
-  const [selectedBankId, setSelectedBankId] = useState<string>(INSURANCE_COMPANIES[0].id);
+  const [selectedBankId, setSelectedBankId] = useState<string>(INSURANCE_PROVIDERS[0].id);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -145,7 +145,7 @@ export default function AdminSections() {
       } else {
         response = await api.createSection({
           ...sectionForm,
-          bankId: selectedBankId,
+          insuranceProviderId: selectedBankId,
           order: sections.length,
           questions: [],
         });
@@ -273,7 +273,7 @@ export default function AdminSections() {
     });
   };
 
-  const selectedCompany = INSURANCE_COMPANIES.find((c) => c.id === selectedBankId);
+  const selectedCompany = INSURANCE_PROVIDERS.find((c) => c.id === selectedBankId);
 
   return (
     <div className="p-6 space-y-6">
@@ -296,9 +296,9 @@ export default function AdminSections() {
             <SelectValue placeholder="Choose an insurance company" />
           </SelectTrigger>
           <SelectContent className="max-h-60">
-            {INSURANCE_COMPANIES.map((company) => (
-              <SelectItem key={company.id} value={company.id}>
-                {company.name}
+            {INSURANCE_PROVIDERS.map((provider) => (
+              <SelectItem key={provider.id} value={provider.id}>
+                {provider.name}
               </SelectItem>
             ))}
           </SelectContent>
