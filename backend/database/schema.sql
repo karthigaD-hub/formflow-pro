@@ -1,23 +1,35 @@
 -- XCyber Insurance Portal Database Schema
 -- Run this SQL in your PostgreSQL database
 
--- Create database (run this separately if needed)
--- CREATE DATABASE xcyber;
-
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Drop existing tables (in reverse order of dependencies)
+DROP TABLE IF EXISTS response_answers CASCADE;
 DROP TABLE IF EXISTS form_responses CASCADE;
 DROP TABLE IF EXISTS questions CASCADE;
 DROP TABLE IF EXISTS sections CASCADE;
-DROP TABLE IF EXISTS banks CASCADE;
 DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS insurance_providers CASCADE;
 DROP TYPE IF EXISTS app_role CASCADE;
+DROP TYPE IF EXISTS response_status CASCADE;
 
 -- Create role enum
 CREATE TYPE app_role AS ENUM ('admin', 'agent', 'user');
+
+-- Create response status enum
+CREATE TYPE response_status AS ENUM ('DRAFT', 'SUBMITTED');
+
+-- Insurance Providers table (REQUIRED - must be created first)
+CREATE TABLE insurance_providers (
+  id VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  logo TEXT DEFAULT '',
+  description TEXT DEFAULT '',
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
 -- Users table
 CREATE TABLE users (
@@ -34,28 +46,14 @@ CREATE TABLE user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   role app_role NOT NULL,
-  bank_id VARCHAR(50), -- For agents: which insurance company they belong to
+  insurance_provider_id VARCHAR(50) REFERENCES insurance_providers(id) ON DELETE SET NULL,
   UNIQUE(user_id, role)
 );
 
--- Banks table (insurance companies)
-CREATE TABLE banks (
-  id VARCHAR(50) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  logo TEXT DEFAULT '',
-  description TEXT DEFAULT '',
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Add foreign key for user_roles.bank_id after banks table is created
-ALTER TABLE user_roles ADD CONSTRAINT fk_user_roles_bank 
-  FOREIGN KEY (bank_id) REFERENCES banks(id) ON DELETE SET NULL;
-
--- Sections table (form sections for each insurance company)
+-- Sections table (form sections for each insurance provider)
 CREATE TABLE sections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  bank_id VARCHAR(50) REFERENCES banks(id) ON DELETE CASCADE,
+  insurance_provider_id VARCHAR(50) REFERENCES insurance_providers(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   description TEXT DEFAULT '',
   "order" INT DEFAULT 0,
@@ -76,15 +74,28 @@ CREATE TABLE questions (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Form responses table (user submissions)
+-- Form responses table (user submissions - main header)
 CREATE TABLE form_responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   section_id UUID REFERENCES sections(id) ON DELETE CASCADE,
-  bank_id VARCHAR(50) REFERENCES banks(id) ON DELETE SET NULL,
+  insurance_provider_id VARCHAR(50) REFERENCES insurance_providers(id) ON DELETE SET NULL,
   responses JSONB NOT NULL DEFAULT '[]', -- [{"questionId": "uuid", "value": "answer"}]
+  status response_status DEFAULT 'DRAFT',
   is_submitted BOOLEAN DEFAULT false,
   submitted_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, section_id) -- One response per user per section
+);
+
+-- Response answers table (individual question answers for granular queries)
+CREATE TABLE response_answers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  response_id UUID REFERENCES form_responses(id) ON DELETE CASCADE,
+  question_id UUID REFERENCES questions(id) ON DELETE CASCADE,
+  answer_value TEXT,
+  answer_array JSONB, -- For checkbox/multi-select answers
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -92,15 +103,18 @@ CREATE TABLE form_responses (
 -- Indexes for better query performance
 CREATE INDEX idx_user_roles_user ON user_roles(user_id);
 CREATE INDEX idx_user_roles_role ON user_roles(role);
-CREATE INDEX idx_user_roles_bank ON user_roles(bank_id);
-CREATE INDEX idx_sections_bank ON sections(bank_id);
+CREATE INDEX idx_user_roles_provider ON user_roles(insurance_provider_id);
+CREATE INDEX idx_sections_provider ON sections(insurance_provider_id);
 CREATE INDEX idx_sections_order ON sections("order");
 CREATE INDEX idx_questions_section ON questions(section_id);
 CREATE INDEX idx_questions_order ON questions("order");
 CREATE INDEX idx_responses_user ON form_responses(user_id);
 CREATE INDEX idx_responses_section ON form_responses(section_id);
-CREATE INDEX idx_responses_bank ON form_responses(bank_id);
+CREATE INDEX idx_responses_provider ON form_responses(insurance_provider_id);
+CREATE INDEX idx_responses_status ON form_responses(status);
 CREATE INDEX idx_responses_submitted ON form_responses(is_submitted);
+CREATE INDEX idx_response_answers_response ON response_answers(response_id);
+CREATE INDEX idx_response_answers_question ON response_answers(question_id);
 
 -- Trigger to update updated_at on form_responses
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -116,12 +130,16 @@ CREATE TRIGGER update_form_responses_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_response_answers_updated_at
+    BEFORE UPDATE ON response_answers
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================================
--- SEED DATA - Insurance Companies (Required)
+-- SEED DATA - Insurance Providers (Required)
 -- ============================================
 
--- Insert all insurance companies FIRST (required for foreign keys)
-INSERT INTO banks (id, name, logo, description, is_active) VALUES 
+INSERT INTO insurance_providers (id, name, logo, description, is_active) VALUES 
   ('lic', 'Life Insurance Corporation of India (LIC)', '', 'India''s largest life insurance company', true),
   ('hdfc-life', 'HDFC Life Insurance', '', 'HDFC Life Insurance Services', true),
   ('icici-prudential', 'ICICI Prudential Life Insurance', '', 'ICICI Prudential Life Insurance', true),
@@ -145,8 +163,7 @@ INSERT INTO banks (id, name, logo, description, is_active) VALUES
 -- ============================================
 -- SEED DATA - Test Users
 -- ============================================
--- Password for both: the hash below corresponds to "Admin@123" and "Agent@123"
--- Generated using bcrypt with 10 rounds
+-- Password: Admin@123 (bcrypt hash with 10 rounds)
 
 -- Insert admin user
 -- Email: admin@xcyber.com | Password: Admin@123
@@ -173,15 +190,29 @@ VALUES (
   '$2a$10$rOvHPxfzO2.JV9o3LrQpwuZlXpYLWX8Q.F2D5YvVJXvGQkzZQgEIi'
 );
 
-INSERT INTO user_roles (user_id, role, bank_id)
+INSERT INTO user_roles (user_id, role, insurance_provider_id)
 VALUES ('a0000000-0000-0000-0000-000000000002', 'agent', 'hdfc-life');
+
+-- Insert sample regular user
+-- Email: user@xcyber.com | Password: User@123
+INSERT INTO users (id, name, email, phone, password_hash)
+VALUES (
+  'a0000000-0000-0000-0000-000000000003',
+  'Test User',
+  'user@xcyber.com',
+  '+1234567892',
+  '$2a$10$rOvHPxfzO2.JV9o3LrQpwuZlXpYLWX8Q.F2D5YvVJXvGQkzZQgEIi'
+);
+
+INSERT INTO user_roles (user_id, role, insurance_provider_id)
+VALUES ('a0000000-0000-0000-0000-000000000003', 'user', 'hdfc-life');
 
 -- ============================================
 -- SEED DATA - Sample Section & Questions
 -- ============================================
 
 -- Insert sample section for HDFC Life
-INSERT INTO sections (id, bank_id, title, description, "order", is_active)
+INSERT INTO sections (id, insurance_provider_id, title, description, "order", is_active)
 VALUES (
   's0000000-0000-0000-0000-000000000001',
   'hdfc-life',
@@ -203,14 +234,21 @@ VALUES
   ('s0000000-0000-0000-0000-000000000001', 'mcq', 'Marital Status', '', true,
    '[{"id": "1", "label": "Single", "value": "single"}, {"id": "2", "label": "Married", "value": "married"}, {"id": "3", "label": "Divorced", "value": "divorced"}]', 6);
 
--- Print success message
+-- ============================================
+-- SUCCESS MESSAGE
+-- ============================================
 DO $$
 BEGIN
   RAISE NOTICE '============================================';
-  RAISE NOTICE 'Database schema created successfully!';
+  RAISE NOTICE 'XCYBER Database Schema Created Successfully!';
   RAISE NOTICE '============================================';
   RAISE NOTICE 'Test Credentials:';
   RAISE NOTICE 'Admin: admin@xcyber.com / Admin@123';
   RAISE NOTICE 'Agent: agent@xcyber.com / Agent@123';
+  RAISE NOTICE 'User:  user@xcyber.com  / User@123';
+  RAISE NOTICE '============================================';
+  RAISE NOTICE 'Insurance Providers: 19 seeded';
+  RAISE NOTICE 'Sample Section: Personal Information (HDFC Life)';
+  RAISE NOTICE 'Sample Questions: 6 questions created';
   RAISE NOTICE '============================================';
 END $$;

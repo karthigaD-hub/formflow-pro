@@ -29,7 +29,7 @@ const upload = multer({
 // Get all questions (admin only)
 router.get('/', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
   try {
-    const { sectionId, bankId } = req.query;
+    const { sectionId, insuranceProviderId } = req.query;
     
     let sql = 'SELECT * FROM questions WHERE 1=1';
     const params: any[] = [];
@@ -162,7 +162,7 @@ router.post(
         return res.status(400).json({ success: false, message: 'No file uploaded' });
       }
 
-      const { sectionId, bankId } = req.body;
+      const { sectionId, insuranceProviderId } = req.body;
 
       if (!sectionId) {
         return res.status(400).json({ success: false, message: 'Section ID is required' });

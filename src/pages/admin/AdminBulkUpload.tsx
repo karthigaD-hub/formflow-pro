@@ -211,7 +211,7 @@ export default function AdminBulkUpload() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('sectionId', selectedSectionId);
-      formData.append('bankId', selectedBankId);
+      formData.append('insuranceProviderId', selectedBankId);
 
       // Simulate progress
       const progressInterval = setInterval(() => {
