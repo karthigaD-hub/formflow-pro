@@ -11,7 +11,9 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     const user = req.user!;
 
     let sql = `
-      SELECT fr.*, 
+      SELECT fr.id, fr.user_id, fr.section_id, fr.insurance_provider_id, 
+             fr.responses, fr.status, fr.is_submitted, fr.submitted_at, 
+             fr.created_at, fr.updated_at,
              u.name as user_name, u.email as user_email, u.phone as user_phone,
              s.title as section_title, s.description as section_description,
              ip.name as provider_name, ip.logo as provider_logo
@@ -108,7 +110,9 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     const user = req.user!;
 
     let sql = `
-      SELECT fr.*, 
+      SELECT fr.id, fr.user_id, fr.section_id, fr.insurance_provider_id, 
+             fr.responses, fr.status, fr.is_submitted, fr.submitted_at, 
+             fr.created_at, fr.updated_at,
              u.name as user_name, u.email as user_email, u.phone as user_phone,
              s.title as section_title, s.description as section_description,
              ip.name as provider_name, ip.logo as provider_logo
